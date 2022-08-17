@@ -13,7 +13,7 @@ class BookCategory(models.Model):
     string='Parent Category', ondelete='restrict',
     index = True
     )
-    child_id = fields.One2many('library.book.category',
+    child_ids = fields.One2many('library.book.category',
     'parent_id' , string='Childs Categories'
     )
     parent_path = fields.Char(index=True)
