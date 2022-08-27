@@ -29,8 +29,9 @@ class LibraryBook(models.Model):
     notes = fields.Text('Internal note')
     author_ids = fields.Many2many('res.partner', string='Author')
     state = fields.Selection(
-        [('draft','Not available'),
+        [('draft','Unavailable'),
         ('available', 'Available'),
+        ('borrowed', 'Borrowed'),
          ('lost', 'Lost')],
         'state', default="draft")
     description = fields.Html('Decription')
@@ -66,6 +67,7 @@ class LibraryBook(models.Model):
         compute_sudo=False,
     )
     ref_doc_id = fields.Reference(selection='_referencable_models', string='Reference Document')
+
 
     #constraints sql
     _sql_constraints = [('name_uniq', 'UNIQUE (name)', 'Book title must be unique.')]
@@ -112,6 +114,35 @@ class LibraryBook(models.Model):
     def _referencable_models(self):
         models = self.env['ir.model'].search([('field_id.name', '=', 'message_id')])
         return [(x.model, x.name) for x in models]
+
+    @api.model
+    def is_allowed_transition(self, old_state, new_state):
+        allowed = [('draft','available'),
+                  ('available', 'borrowed'),
+                  ('borrowed', 'available'),
+                  ('available', 'lost'),
+                  ('borrowed', 'lost'),
+                  ('lost', 'available')]
+        return ( old_state, new_state) in allowed
+
+    @api.multi
+    def change_state(self, new_state):
+        for book in self:
+            if book.is_allowed_transition(book.state, new_state):
+                book.state = new_state
+            else:
+                continue
+
+    
+    def make_available(self):
+        self.change_state('available')
+
+    def make_borrowed(self):
+        self.change_state('borrowed')
+
+    def make_lost(self):
+        self.change_state('lost')
+
     
 
 
